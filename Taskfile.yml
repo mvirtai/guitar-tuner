@@ -1,0 +1,310 @@
+version: '3'
+
+tasks:
+  default:
+    desc: List all available tasks
+    cmds:
+      - task --list
+
+  version:
+    desc: Print current application version
+    cmds:
+      - cat VERSION
+
+  version:bump:
+    desc: "Bump version in all relevant project files. Usage: task version:bump PART=patch|minor|major"
+    vars:
+      PART: '{{default "patch" .PART}}'
+    cmds:
+      - |
+        CURRENT=$(cat VERSION 2>/dev/null || echo "0.1.0")
+        IFS="." read -r MAJOR MINOR PATCH <<< "$CURRENT"
+        case "{{.PART}}" in
+          major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+          minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+          patch) PATCH=$((PATCH + 1)) ;;
+          *) echo "Unknown part: {{.PART}}"; exit 1 ;;
+        esac
+        NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+        echo "$NEW_VERSION" > VERSION
+        echo "✅ Version bumped from $CURRENT to $NEW_VERSION"
+
+  version:set:
+    desc: "Set explicit version in all relevant project files. Usage: task version:set VER=0.2.0"
+    cmds:
+      - |
+        NEW_VERSION="{{.VER}}"
+        if [ -z "$NEW_VERSION" ]; then echo "Usage: task version:set VER=x.y.z"; exit 1; fi
+        echo "$NEW_VERSION" > VERSION
+        echo "✅ Version set to $NEW_VERSION"
+
+  check:
+    desc: Run all project quality checks (tidy, lint, test)
+    cmds:
+      - task: tidy
+      - task: lint
+      - task: test
+
+  tidy:
+    desc: Tidy and verify Go module dependencies
+    cmds:
+      - go mod tidy
+      - go mod verify
+
+  lint:
+    desc: Run Go code linters and vet checks
+    cmds:
+      - go vet ./...
+      - |
+        if command -v golangci-lint >/dev/null 2>&1; then
+          golangci-lint run ./...
+        fi
+
+  test:
+    desc: Run all Go unit tests
+    cmds:
+      - go test -v ./...
+
+  test:cov:
+    desc: Run all Go tests with coverage profiling
+    cmds:
+      - go test -v -coverprofile=coverage.txt ./...
+      - go tool cover -func=coverage.txt
+
+  test:race:
+    desc: Run all Go tests with race detector
+    cmds:
+      - go test -v -race ./...
+
+  build:
+    desc: Build the guitar tuner binary
+    cmds:
+      - mkdir -p bin
+      - go build -o bin/tuner cmd/tuner/main.go
+
+  run:
+    desc: Run the guitar tuner
+    cmds:
+      - go run cmd/tuner/main.go
+
+  git:new-branch:
+    desc: "Create a new branch from main. USAGE: task git:new-branch FEAT_TYPE=feat BRANCH_NAME=yin-pitch"
+    cmds:
+      - |
+        if [ -z "{{.FEAT_TYPE}}" ] || [ -z "{{.BRANCH_NAME}}" ]; then
+          echo "Usage: task git:new-branch FEAT_TYPE=feat/fix/ci/docs/refactor/chore/test/perf BRANCH_NAME=my-feature"
+          exit 1
+        fi
+        git switch main
+        git pull origin main
+        git switch -c "{{.FEAT_TYPE}}/{{.BRANCH_NAME}}"
+
+  git:commit:
+    desc: 'Stage changes and create a formatted conventional commit. Usage: task git:commit TYPE=feat SCOPE=dsp MSG="implement yin algorithm" [FILES="internal/dsp/"]'
+    cmds:
+      - |
+        VALID_TYPES="feat fix docs style refactor perf test build ci chore"
+        TYPE="{{.TYPE}}"
+        SCOPE="{{.SCOPE}}"
+        MSG="{{.MSG}}"
+        FILES="{{.FILES}}"
+        if [ -z "$FILES" ]; then FILES="."; fi
+
+        if [ -z "$TYPE" ] || [ -z "$SCOPE" ] || [ -z "$MSG" ]; then
+          echo "ERROR: Parameters TYPE, SCOPE, and MSG are required!"
+          echo "Usage: task git:commit TYPE=feat SCOPE=dsp MSG=\"implement yin algorithm\" [FILES=\"internal/dsp/\"]"
+          echo "Allowed TYPE values: $VALID_TYPES"
+          exit 1
+        fi
+
+        IS_VALID=0
+        for t in $VALID_TYPES; do
+          if [ "$t" = "$TYPE" ]; then IS_VALID=1; break; fi
+        done
+
+        if [ $IS_VALID -eq 0 ]; then
+          echo "ERROR: Invalid commit type '$TYPE'."
+          echo "Allowed TYPE values are: $VALID_TYPES"
+          exit 1
+        fi
+
+        FULL_MSG="${TYPE}(${SCOPE}): ${MSG}"
+        git add $FILES
+        git commit -m "$FULL_MSG"
+        echo "✅ Committed: $FULL_MSG"
+
+  git:stage-commit-push:
+    desc: "Stage, commit and push the current branch to origin. USAGE: task git:stage-commit-push MESSAGE='feat: add dsp'"
+    vars:
+      CURRENT_BRANCH:
+        sh: git branch --show-current
+    cmds:
+      - git add .
+      - git commit -m "{{.MESSAGE}}"
+      - git push origin {{.CURRENT_BRANCH}}
+
+  git:diff:
+    desc: Show diff of current branch against main
+    cmds:
+      - git diff main...HEAD
+
+  git:diff-head:
+    desc: Show diff of the latest commit
+    cmds:
+      - git diff HEAD~1
+
+  git:status:
+    desc: Check status and checks of current PR on GitHub
+    cmds:
+      - gh pr status 2>/dev/null || git status
+
+  git:pr:
+    desc: Create a GitHub PR using a permanent PR story file from ./pr_stories/ (auto-detects newest if FILE omitted)
+    vars:
+      CURRENT_BRANCH:
+        sh: git branch --show-current
+      STORY_FILE:
+        sh: |
+          if [ -n "{{.FILE}}" ]; then
+            F="{{.FILE}}"
+            F="${F#pr_stories/}"
+            if [[ "$F" != *.md ]]; then F="${F}.md"; fi
+            echo "$F"
+          else
+            find pr_stories -maxdepth 1 -name '[0-9]*.md' -type f 2>/dev/null | sort -V | tail -n 1 | xargs -n 1 basename 2>/dev/null
+          fi
+      STORY_PATH: "pr_stories/{{.STORY_FILE}}"
+      TITLE:
+        sh: |
+          if [ -n "{{.TITLE}}" ]; then
+            echo "{{.TITLE}}"
+          elif [ -n "{{.STORY_FILE}}" ]; then
+            echo "{{.STORY_FILE}}" | sed -E -e 's/\.md$//' -e 's/^[0-9]+-//' -e 's/^([a-z]+)-/\1: /' -e 's/-/ /g'
+          else
+            git branch --show-current
+          fi
+    preconditions:
+      - sh: command -v gh >/dev/null 2>&1
+        msg: "GitHub CLI (gh) is required but not installed."
+      - sh: 'test -n "{{.STORY_FILE}}"'
+        msg: "No PR story file found or specified. Usage: task git:pr [FILE=your-story.md]"
+      - sh: 'test -f "{{.STORY_PATH}}"'
+        msg: "The story file '{{.STORY_PATH}}' does not exist. Ensure it is placed in ./pr_stories/."
+    cmds:
+      - task: check
+      - 'echo "Using PR story: {{.STORY_PATH}}"'
+      - 'echo "PR Title: {{.TITLE}}"'
+      - cp "{{.STORY_PATH}}" temp_pr_story.md
+      - 'echo "Pushing branch {{.CURRENT_BRANCH}} to origin..."'
+      - git push origin {{.CURRENT_BRANCH}}
+      - 'echo "Creating pull request via GitHub CLI..."'
+      - gh pr create --title "{{.TITLE}}" --body-file temp_pr_story.md
+      - rm -f temp_pr_story.md
+      - 'echo "✅ PR created successfully!"'
+
+  git:pr-body:
+    desc: Update existing GitHub PR body with latest PR story. Usage task git:pr-body [FILE=story.md] [PR=1]
+    vars:
+      CURRENT_BRANCH:
+        sh: git branch --show-current
+      STORY_FILE:
+        sh: |
+          if [ -n "{{.FILE}}" ]; then
+            F="{{.FILE}}"
+            F="${F#pr_stories/}"
+            if [[ "$F" != *.md ]]; then F="${F}.md"; fi
+            echo "$F"
+          else
+            find pr_stories -maxdepth 1 -name '[0-9]*.md' -type f 2>/dev/null | sort -V | tail -n 1 | xargs -n 1 basename 2>/dev/null
+          fi
+      STORY_PATH: "pr_stories/{{.STORY_FILE}}"
+    preconditions:
+      - sh: command -v gh >/dev/null 2>&1
+        msg: "GitHub CLI (gh) is required."
+      - sh: 'test -f "{{.STORY_PATH}}"'
+        msg: "Story file '{{.STORY_PATH}}' does not exist."
+    cmds:
+      - |
+        PR_NUM="{{.PR}}"
+        if [ -z "$PR_NUM" ]; then
+          PR_NUM=$(gh api "repos/:owner/:repo/pulls?state=open" --jq '.[] | select(.head.ref == "{{.CURRENT_BRANCH}}") | .number' 2>/dev/null | head -n 1)
+        fi
+        if [ -z "$PR_NUM" ]; then
+          echo "Error: Could not find open pull request for branch '{{.CURRENT_BRANCH}}'. Specify PR number: task git:pr-body PR=<number>"
+          exit 1
+        fi
+        gh api -X PATCH "repos/:owner/:repo/pulls/$PR_NUM" -F "body=@{{.STORY_PATH}}" >/dev/null
+        echo "✅ PR #$PR_NUM body updated successfully!"
+
+  git:pr-edit:
+    desc: Update existing GitHub PR title and/or body. Usage task git:pr-edit [TITLE="..."] [FILE=story.md] [PR=1]
+    vars:
+      CURRENT_BRANCH:
+        sh: git branch --show-current
+      STORY_FILE:
+        sh: |
+          if [ -n "{{.FILE}}" ]; then
+            F="{{.FILE}}"
+            F="${F#pr_stories/}"
+            if [[ "$F" != *.md ]]; then F="${F}.md"; fi
+            echo "$F"
+          fi
+      STORY_PATH: '{{if .STORY_FILE}}pr_stories/{{.STORY_FILE}}{{end}}'
+    cmds:
+      - |
+        PR_NUM="{{.PR}}"
+        if [ -z "$PR_NUM" ]; then
+          PR_NUM=$(gh api "repos/:owner/:repo/pulls?state=open" --jq '.[] | select(.head.ref == "{{.CURRENT_BRANCH}}") | .number' 2>/dev/null | head -n 1)
+        fi
+        if [ -z "$PR_NUM" ]; then
+          echo "Error: Could not find open PR for branch '{{.CURRENT_BRANCH}}'. Specify PR number: task git:pr-edit PR=<number>"
+          exit 1
+        fi
+        ARGS=()
+        if [ -n "{{.TITLE}}" ]; then ARGS+=(-f "title={{.TITLE}}"); fi
+        if [ -n "{{.STORY_PATH}}" ] && [ -f "{{.STORY_PATH}}" ]; then ARGS+=(-F "body=@{{.STORY_PATH}}"); fi
+        gh api -X PATCH "repos/:owner/:repo/pulls/$PR_NUM" "${ARGS[@]}" >/dev/null
+        echo "✅ PR #$PR_NUM updated!"
+
+  git:merge:
+    desc: Squash and merge current branch's PR on GitHub and delete the branch
+    vars:
+      CURRENT_BRANCH:
+        sh: git branch --show-current
+    cmds:
+      - |
+        if [ "{{.CURRENT_BRANCH}}" = "main" ]; then
+          echo "Cannot merge main into main."
+          exit 1
+        fi
+        gh pr merge {{.CURRENT_BRANCH}} --squash --delete-branch
+        echo "✅ PR merged and remote branch deleted!"
+
+  git:post-merge-branch:
+    desc: Switch to main, hard reset to origin/main, and delete obsolete topic branch
+    vars:
+      CURRENT_BRANCH:
+        sh: git branch --show-current
+    cmds:
+      - |
+        BRANCH="{{.CURRENT_BRANCH}}"
+        if [ "$BRANCH" = "main" ]; then
+          git fetch origin main
+          git reset --hard origin/main
+          echo "✅ main reset to origin/main."
+          exit 0
+        fi
+        git switch main
+        git fetch origin main
+        git reset --hard origin/main
+        git branch -D "$BRANCH" 2>/dev/null || true
+        echo "✅ Switched to main and deleted local branch $BRANCH."
+
+  git:tag:
+    desc: Create annotated git release tag for current version in VERSION file
+    cmds:
+      - |
+        VER=$(cat VERSION 2>/dev/null || echo "0.1.0")
+        git tag -a "v$VER" -m "Release v$VER"
+        git push origin "v$VER"
+        echo "✅ Tagged and pushed v$VER"

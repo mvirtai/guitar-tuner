@@ -1,0 +1,24 @@
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test and coverage artifacts
+*.test
+coverage.txt
+coverage.html
+.cov/
+
+# Task runner
+.task/
+temp_pr_story.md
+
+# OS and IDE files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
