@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Muistuta lokikirjan päivityksestä",
+      "trigger": "Stop",
+      "action": {
+        "type": "agent",
+        "prompt": "Session on päättymässä. Tarkista onko tänään tehty merkittäviä muutoksia (koodimuutoksia, päätöksiä, bugifixejä, arkkitehtuurimuutoksia). Jos kyllä, muistuta käyttäjää päivittämään `.plans/PROJECTLOG.md` uudella sessio-merkinnällä. Jos loki on jo ajan tasalla, ei tarvitse tehdä mitään."
+      }
+    }
+  ]
+}

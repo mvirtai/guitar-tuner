@@ -1,0 +1,13 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Lataa projektin tilanne session alussa",
+      "trigger": "SessionStart",
+      "action": {
+        "type": "command",
+        "command": "echo \"=== GUITAR TUNER — PROJEKTILOKI ===\" && echo \"\" && cat /home/vivaldev/code/guitar_tuner/.plans/PROJECTLOG.md | head -80 && echo \"\" && echo \"=== GIT STATUS ===\" && cd /home/vivaldev/code/guitar_tuner && git status --short && echo \"\" && echo \"=== AKTIIVINEN HAARA ===\" && git branch --show-current"
+      }
+    }
+  ]
+}
