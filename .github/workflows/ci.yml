@@ -50,6 +50,14 @@ jobs:
             echo "No Go tests found yet."
           fi
 
+      - name: Upload test coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.txt
+          flags: unittests
+          fail_ci_if_error: false
+          verbose: false
+
       - name: Verify Build
         run: |
           if [ -f "cmd/tuner/main.go" ]; then
@@ -57,3 +65,17 @@ jobs:
           else
             echo "cmd/tuner/main.go not present yet."
           fi
+
+  documentation-quality:
+    name: Documentation Quality
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      - name: Lint Markdown files
+        uses: nosborn/github-action-markdown-cli@v3.3.0
+        with:
+          files: .
+          config_file: .markdownlint.json
+          ignore_files: node_modules vendor
