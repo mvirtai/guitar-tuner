@@ -300,6 +300,28 @@ tasks:
         git branch -D "$BRANCH" 2>/dev/null || true
         echo "✅ Switched to main and deleted local branch $BRANCH."
 
+  log:
+    desc: "Open the project log for editing. Usage: task log"
+    cmds:
+      - |
+        EDITOR="${EDITOR:-nano}"
+        $EDITOR .plans/PROJECTLOG.md
+
+  log:status:
+    desc: Print the current project state summary from PROJECTLOG.md
+    cmds:
+      - |
+        echo "=== Guitar Tuner — Projektitila ==="
+        echo ""
+        # Extract the "Projektin tila" table section
+        awk '/^## Projektin tila/,/^---$/' .plans/PROJECTLOG.md | head -20
+        echo ""
+        echo "=== Git Status ==="
+        git status --short
+        echo ""
+        echo "=== Aktiivinen haara: $(git branch --show-current) ==="
+        echo "=== Versio: $(cat VERSION) ==="
+
   git:tag:
     desc: Create annotated git release tag for current version in VERSION file
     cmds:
@@ -308,3 +330,66 @@ tasks:
         git tag -a "v$VER" -m "Release v$VER"
         git push origin "v$VER"
         echo "✅ Tagged and pushed v$VER"
+
+  workflow:
+    desc: Print workflow quick reference
+    cmds:
+      - |
+        echo "🎸 Guitar Tuner — Workflow Quick Reference"
+        echo ""
+        echo "📋 VAIHE 1: SUUNNITELMA"
+        echo "   task log          # Avaa lokikirja"
+        echo ""
+        echo "🌳 VAIHE 2: HAARA & SETUP"
+        echo "   task git:new-branch FEAT_TYPE=feat BRANCH_NAME=feature-name"
+        echo ""
+        echo "💻 VAIHE 3: TOTEUTUS & TESTAUS"
+        echo "   task check        # Laadunvarmistus"
+        echo "   go test -v ./...  # Aja testit"
+        echo ""
+        echo "✅ VAIHE 4: COMMITOINTI"
+        echo "   task git:commit TYPE=feat SCOPE=dsp MSG=\"message\" FILES=\"file.go\""
+        echo ""
+        echo "📝 VAIHE 5: PR-STORY & PR"
+        echo "   cp .plans/templates/PR_STORY_EXTENDED.template.md pr_stories/NNN-name.md"
+        echo "   task git:pr FILE=pr_stories/NNN-name.md"
+        echo ""
+        echo "📚 Lue lisää: .plans/WORKFLOW.md ja .plans/QUICK_START.md"
+
+  workflow:docs:
+    desc: Open workflow documentation
+    cmds:
+      - |
+        if [ -z "$EDITOR" ]; then EDITOR=nano; fi
+        echo "Avaa workflow-dokumentaatio editorissa..."
+        echo "Valitse: 1=WORKFLOW.md 2=QUICK_START.md 3=PROJECTLOG.md"
+        read -p "Valinta (1-3): " choice
+        case "$choice" in
+          1) $EDITOR .plans/WORKFLOW.md ;;
+          2) $EDITOR .plans/QUICK_START.md ;;
+          3) $EDITOR .plans/PROJECTLOG.md ;;
+          *) echo "Tuntematon valinta" ;;
+        esac
+
+  pr:template:
+    desc: "Show PR story templates. Usage: task pr:template TYPE=compact|extended|visual"
+    vars:
+      TYPE: "{{.TYPE | default \"extended\"}}"
+    cmds:
+      - |
+        echo "PR Story Templates — Valittavissa:"
+        echo ""
+        echo "1. COMPACT       (~500–800 sanaa, 0–1 diagrammi)"
+        echo "   Bugfixet, pienet featuret, yksittäiset tiedostot"
+        echo ""
+        echo "2. EXTENDED      (~1500–3000 sanaa, 1–3 diagrammia)"
+        echo "   Suuret featuret, multi-layer, arkkitehtuuri"
+        echo ""
+        echo "3. VISUAL        (~800–1500 sanaa, 3–5 diagrammia)"
+        echo "   Data pipelines, UI flows, architectural changes"
+        echo ""
+        echo "Käyttö:"
+        echo "   cp .plans/templates/PR_STORY_COMPACT.template.md pr_stories/001-type-name.md"
+        echo "   cp .plans/templates/PR_STORY_EXTENDED.template.md pr_stories/001-type-name.md"
+        echo "   cp .plans/templates/PR_STORY_VISUAL.template.md pr_stories/001-type-name.md"
+
