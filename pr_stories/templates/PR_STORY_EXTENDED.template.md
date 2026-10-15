@@ -66,18 +66,18 @@ graph TD
 
 ## 📈 Improvement Metrics & Key Figures
 
-* **[Metric 1]:** [e.g., Statement coverage increased from X% to Y%]
-* **[Metric 2]:** [e.g., Latency, algorithmic complexity O(1) streaming vs O(N) memory]
-* **[Metric 3]:** [e.g., Precision, continuous resolution, or elimination of edge-case regressions]
-* **[Metric 4]:** [e.g., Performance, zero hook overhead, strict boundary enforcement]
+- **[Metric 1]:** [e.g., Statement coverage increased from X% to Y%]
+- **[Metric 2]:** [e.g., Latency, algorithmic complexity O(1) streaming vs O(N) memory]
+- **[Metric 3]:** [e.g., Precision, continuous resolution, or elimination of edge-case regressions]
+- **[Metric 4]:** [e.g., Performance, zero hook overhead, strict boundary enforcement]
 
 ---
 
 ## Security & Compliance
 
-* **[Access Control & Ownership]:** [How user ownership and auth boundary checks are enforced.]
-* **[Input Sanitization & Bounds]:** [How user inputs, bounds, and parameters are validated and sanitized.]
-* **[Error Handling]:** [How errors are propagated without leaking internal details.]
+- **[Access Control & Ownership]:** [How user ownership and auth boundary checks are enforced.]
+- **[Input Sanitization & Bounds]:** [How user inputs, bounds, and parameters are validated and sanitized.]
+- **[Error Handling]:** [How errors are propagated without leaking internal details.]
 
 ---
 
@@ -96,8 +96,8 @@ graph TD
 
 #### Backend (Go Test Suite)
 
-* **Coverage:** [Statement coverage metrics from `.cov/backend/coverage.txt`]
-* **Test Suite:** `go test -v ./...` or package-specific test outputs.
+- **Coverage:** [Statement coverage metrics from `.cov/backend/coverage.txt`]
+- **Test Suite:** `go test -v ./...` or package-specific test outputs.
 
 ```text
 [Paste terminal test output here]
