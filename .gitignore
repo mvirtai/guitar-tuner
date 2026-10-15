@@ -1,4 +1,4 @@
-# Binaries
+# Binaries for programs and plugins
 bin/
 *.exe
 *.exe~
@@ -6,19 +6,65 @@ bin/
 *.so
 *.dylib
 
-# Test and coverage artifacts
+# Test binary, built with `go test -c`
 *.test
+
+# Output of the go coverage tool
+*.out
 coverage.txt
 coverage.html
 .cov/
 
-# Task runner
-.task/
-temp_pr_story.md
+# Go workspace file
+go.work
 
-# OS and IDE files
+# Dependency directories
+vendor/
+
+# Temporary files
+*.tmp
+*.swp
+*~
 .DS_Store
+
+# IDE and editor files
 .idea/
 .vscode/
 *.swp
+*.swo
 *~
+.sublime-project
+.sublime-workspace
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+*.app
+
+# Linux
+.directory
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# Task runner temp files
+.task/
+temp_pr_story.md
+
+# Project-specific
+bin/tuner
+dist/
+
+# Go build cache
+.cache/
+
+# Kiro agent skills (auto-generated)
+.agents/skills/
+
+# Kiro plan-specific files
+.plans/.agents/
+
+# Test artifacts
+test_for_go_tui.gsx
